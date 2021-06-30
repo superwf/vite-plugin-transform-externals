@@ -1,27 +1,15 @@
 import type { Plugin } from 'vite'
 import { transformExternals } from './transformExternals'
-import type { Option } from './type'
+import type { PluginOption } from './type'
 
-export default (option: Option) => {
+export default (option: PluginOption) => {
   const { externals } = option
-  // const externalKeys = Object.keys(externals)
+  const globalName = option.globalName || 'window'
+  const externalKeys = Object.keys(externals)
 
   const plugin: Plugin = {
     name: 'vite-plugin-externals',
     enforce: 'pre',
-    // resolveId(id: string) {
-    //   if (id in externals) {
-    //     return id
-    //   }
-    //   return null
-    // },
-    // load(id) {
-    //   if (id in externals) {
-    //     return `const mod = window.${(externals as any)[id]};
-    //   export default mod`
-    //   }
-    //   return null
-    // },
 
     /**
      * transform
@@ -29,8 +17,21 @@ export default (option: Option) => {
      *            ⬇️
      * `const { ... } = window.xxx`
      * */
-    transform(code, id) {
-      return transformExternals({ code, externals, filename: id })
+    transform(code: string, id: string) {
+      if (/[tj]sx?$/.test(id)) {
+        const lines = code.split('\n').map(line => {
+          if (line.startsWith('import ')) {
+            if (externalKeys.some(key => line.match(new RegExp(`'${key}'$`)))) {
+              return transformExternals({ code: line, externals, globalName })
+            }
+          }
+          return line
+        })
+        return {
+          code: lines.join('\n'),
+        }
+      }
+      return code
     },
   }
   return plugin

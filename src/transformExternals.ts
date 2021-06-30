@@ -3,6 +3,7 @@ import generate from '@babel/generator'
 import template from '@babel/template'
 import traverse from '@babel/traverse'
 import type { Node } from '@babel/types'
+import type { PluginOption } from './type'
 // import * as t from '@babel/types'
 
 /**
@@ -23,29 +24,30 @@ import type { Node } from '@babel/types'
 export const transformExternals = ({
   code,
   externals,
-  filename,
+  globalName,
 }: {
   code: string
   externals: Record<string, string | string[]>
-  filename: string
+  globalName?: PluginOption['globalName']
 }) => {
+  globalName = globalName || 'window'
   const externalKeys = Object.keys(externals)
   const ast = parse(code, {
     sourceType: 'module',
     plugins: ['jsx', 'typescript'],
   })
-  console.log(code)
+  let shouldTransform = false
 
   traverse(ast, {
     ImportDeclaration(path) {
-      // remove type node
-      if (path.node.importKind === 'type') {
-        path.remove()
-        return
-      }
-
       if (path.node.source.type === 'StringLiteral' && externalKeys.includes(path.node.source.value)) {
-        // console.log(path.node.source.value)
+        shouldTransform = true
+
+        // remove type node
+        if (path.node.importKind === 'type') {
+          path.remove()
+          return
+        }
         /** 处理named 与 default 两种import模式 */
         const imports = path.node.specifiers.reduce<{
           namedImport: string[]
@@ -70,9 +72,9 @@ export const transformExternals = ({
         )
         const externalValue = externals[path.node.source.value]
         const externalGlobalName = Array.isArray(externalValue) ? externalValue.join("']['") : externalValue
-        const externalGlobalVariable = /^(window|global)[[.]/.test(externalGlobalName)
+        const externalGlobalVariable = /^(window|global|globalThis)[[.]/.test(externalGlobalName)
           ? externalGlobalName
-          : `window['${externalGlobalName}']`
+          : `${globalName}['${externalGlobalName}']`
         const nodes: Node[] = []
         if (imports.defaultImport) {
           nodes.push(template.statement.ast(`const ${imports.defaultImport} = ${externalGlobalVariable};`))
@@ -84,6 +86,9 @@ export const transformExternals = ({
       }
     },
   })
-  const result = generate(ast, { sourceMaps: true, sourceFileName: `${filename}.map`, filename, sourceRoot: '/' }, code)
-  return result
+  // const result = generate(ast, { sourceMaps: true, sourceFileName: filename, filename, sourceRoot: '/' }, code)
+  if (shouldTransform) {
+    return generate(ast, {}, code).code
+  }
+  return code
 }
