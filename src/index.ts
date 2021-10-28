@@ -21,7 +21,7 @@ export default (option: PluginOption) => {
       if (/[tj]sx?$/.test(id)) {
         const lines = code.split('\n').map(line => {
           if (line.startsWith('import ')) {
-            if (externalKeys.some(key => line.match(new RegExp(`'${key}'$`)))) {
+            if (externalKeys.some(key => line.replace('"', "'").match(new RegExp(`'${key}'\\s*;\\s*\r?$`)))) {
               return transformExternals({ code: line, externals, globalName })
             }
           }

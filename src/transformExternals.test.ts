@@ -52,4 +52,19 @@ const {
 
     expect(transformExternals({ code, externals, globalName: 'globalThis' })).toBe("const React = globalThis['React'];")
   })
+
+  it('space and windows EOL and ;', () => {
+    expect(transformExternals({ code: `import React from 'react' `, externals, globalName: 'globalThis' })).toBe(
+      "const React = globalThis['React'];",
+    )
+    expect(transformExternals({ code: `import React from 'react' ; `, externals, globalName: 'globalThis' })).toBe(
+      "const React = globalThis['React'];",
+    )
+    expect(transformExternals({ code: `import React from 'react' ; \r\n`, externals, globalName: 'globalThis' })).toBe(
+      "const React = globalThis['React'];",
+    )
+    expect(transformExternals({ code: `import React from "react" ; \r\n`, externals, globalName: 'globalThis' })).toBe(
+      "const React = globalThis['React'];",
+    )
+  })
 })
