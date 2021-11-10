@@ -67,4 +67,10 @@ const {
       "const React = globalThis['React'];",
     )
   })
+
+  it('with package namespace', () => {
+    expect(
+      transformExternals({ code: `import Sentry from '@sentry/browser' `, externals, globalName: 'globalThis' }),
+    ).toBe("const Sentry = globalThis['Sentry'];")
+  })
 })
