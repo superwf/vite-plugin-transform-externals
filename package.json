@@ -41,6 +41,8 @@
     "vite",
     "plugin",
     "global",
+    "cdn",
+    "unpkg",
     "externals"
   ],
   "files": [

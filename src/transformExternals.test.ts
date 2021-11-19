@@ -21,6 +21,19 @@ const {
   useEffect: useEffect
 } = window['React'];`,
     )
+
+    expect(
+      transformExternals({
+        code: "import React, { forwardRef, useEffect } from 'react'",
+        externals,
+      }),
+    ).toBe(
+      `const React = window['React'];
+const {
+  forwardRef: forwardRef,
+  useEffect: useEffect
+} = window['React'];`,
+    )
   })
 
   it('* as default import', () => {
@@ -72,5 +85,15 @@ const {
     expect(
       transformExternals({ code: `import Sentry from '@sentry/browser' `, externals, globalName: 'globalThis' }),
     ).toBe("const Sentry = globalThis['Sentry'];")
+  })
+
+  it.only('commonjs require', () => {
+    expect(transformExternals({ code: `require('react')`, externals, globalName: 'globalThis' })).toBe(
+      "globalThis['React'];",
+    )
+
+    expect(
+      transformExternals({ code: `const anime = require('rc-queue-anim')`, externals, globalName: 'globalThis' }),
+    ).toBe("const anime = window['rc-queue-anim'];")
   })
 })

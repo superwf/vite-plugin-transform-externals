@@ -39,6 +39,24 @@ export const transformExternals = ({
   let shouldTransform = false
 
   traverse(ast, {
+    CallExpression(path) {
+      const { node } = path
+      if ('name' in node.callee && node.callee.name === 'require' && node.arguments.length === 1) {
+        if ('value' in node.arguments[0] && node.arguments[0].value) {
+          const externalName = String(node.arguments[0].value)
+          if (externalKeys.includes(externalName)) {
+            shouldTransform = true
+            const externalValue = externals[externalName]
+            const externalGlobalName = Array.isArray(externalValue) ? externalValue.join("']['") : externalValue
+            const externalGlobalVariable = /^(window|global|globalThis)[[.]/.test(externalGlobalName)
+              ? externalGlobalName
+              : `${globalName}['${externalGlobalName}']`
+            const newNode: Node = template.statement.ast(externalGlobalVariable)
+            path.replaceWith(newNode)
+          }
+        }
+      }
+    },
     ImportDeclaration(path) {
       if (path.node.source.type === 'StringLiteral' && externalKeys.includes(path.node.source.value)) {
         shouldTransform = true
